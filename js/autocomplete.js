@@ -1,42 +1,46 @@
 var pag = 1;
-var page_limit;
+var page_limit = 0;
 
-function split( val ) {
-  return val.split( /,\s*/ );
-}
+function split(val){ return val.split( /,\s*/ ); }
 
 function extractLast( term ) {
   return split( term ).pop();
 }
 
+// He cambiado unas cosas, no sé si funcionará, pruebalo tú primero.
 function mostrarResultados(numpag) {
-  var args="", array_tags = split( $(".search").val() );
-  for (var i = 0; i < array_tags.length; i++) {
-    args += "tag"+i+"="+encodeURI(array_tags[i])+"&";
-  };
-  args += "page="+numpag;
-  $(".loading").css("display", "block");
-  $.getJSON( 'php/getter.php', args, function (data, status) { // success handler
-    $(".loading").css("display", "none");
-    if(numpag==1){
-      $(".results").empty();
-    }
-    page_limit = Math.floor(data["num_r"]/20) + 1;
-    if( data["num_r"] > 0 ){
-      $.each(data, function(key, value) {
-        if(key!="num_r"){
-          if(value != null){
-            var path2file = encodeURI(value[0]+"/"+key);
-            $('.results')
-              .append('<li><a href='+path2file+' target="_blank"><img class="image" src="img/'+value[1]+'.jpg"><br>'+key+'</a></li>');
-          }
+  let args = `${split($(".search").val()).map((e,a)=>{return(`tag${a}=${encodeURI(e)}`);}).join("&")}&page=${numpag}`;
+  // Comentario: Cuando te refieres a un único objeto, es más eficiente utilizar el tag **id** en vez del tag class.
+  // Puesto que id es único y class pueden existir varios.
+  // SOLUCION: .loading -> #loading; .results -> #results, etc. En html y css, class="loading" por id="loading"
+  $(".loading").show();
+  
+  if(numpag == 1){
+    $(".results").empty();
+  }
+  $.getJSON("php/getter.php", args, (data, status)=>{
+    page_limit = Math.floor(data.num_r / 20) + 1;
+    if(data.num_r > 0){
+      delete data.num_r;
+      $.each(data, (key, value)=>{
+        if(value != null){
+          $(".results").append(''+
+            "<li>"+
+              `<a href="${encodeURI(`${value[0]}/${key}`)}" target="_blank">`+
+                `<img class="image" src="img/${value[1]}.jpg">`+
+                `<div>${key}</div>`+
+              "</a>"+
+            "</li>"+
+          '');
         }
       });
     }else{
-      $(".results")
-        .val("")
-        .append("<li><a>No se encontraron resultados</a></li>");
+      $(".results").html("<li>No hay nada que mostrar.</li>");
     }
+  }).fail((error)=>{
+    $(".results").html("<li>Error al intentar de obtener resultados.</li>");
+  }).always(()=>{
+    $(".loading").hide();
   });
 }
 
